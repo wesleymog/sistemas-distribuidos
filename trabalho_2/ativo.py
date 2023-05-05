@@ -1,33 +1,41 @@
 import socket
+import json
 
-# configuracao do socket
 HOST = 'localhost'
 PORT = 5000
-BUFFER_SIZE = 1024
 
-# criacao do socket
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def main():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+        print(f'Conectado a {HOST}:{PORT}')
 
-# conexao com o servidor
-client_socket.connect((HOST, PORT))
+        while True:
+            command = input('Digite o comando (GET, ADD, REMOVE, SAVE) ou EXIT para sair: ')
+            if command == 'EXIT':
+                break
+            if command in ['GET', 'ADD', 'REMOVE']:
+                word = input('Digite a palavra: ')
+            
 
-while True:
-    # solicitacao de acao ao usuario
-    action = input("Digite a ação (GET, REMOVE ou ADD): ")
-    if action not in ['GET', 'REMOVE', 'ADD']:
-        print("Ação inválida. Tente novamente.")
-        continue
 
-    # solicitação de palavra-chave ao usuário
-    word = input("Digite a palavra-chave: ")
-    
-    # envio de mensagem ao servidor
-    message = f"{action} {word}"
-    client_socket.send(message.encode())
+            # Se for o comando ADD, pede a definição e envia para o servidor
+            if command == 'ADD':
+                definition = input('Digite a definicao: ')
+                data = json.dumps({'word': word, 'definition': definition})
+                s.sendall(f'{command}->{data}'.encode())
+            else:
+                # Envia a mensagem com o comando e a palavra para o servidor
+                message = f'{command}->{word}'
+                s.sendall(message.encode())
+            # Se for o comando REMOVE ou SAVE, pede a senha e envia para o servidor
+            if command == 'REMOVE' or command == 'SAVE':
+                password = input('Digite a senha: ')
+                s.sendall(password.encode())
+            # Processa a resposta do servidor
+            data = s.recv(1024)
+            print(data.decode())
 
-    # recebimento de resposta do servidor
-    data = client_socket.recv(BUFFER_SIZE)
-    print(data.decode())
+            
 
-# fechamento do socket
-client_socket.close()
+if __name__ == '__main__':
+    main()
