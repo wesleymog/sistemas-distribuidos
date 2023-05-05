@@ -96,11 +96,9 @@ class Server(threading.Thread):
             # Decodifica a mensagem e separa o comando da palavra
             print(data.decode('utf-8'))
             message = data.decode()
-            command, word = message.split("->")
-            print(command)
-            print(word)
+            word_dict = json.loads(message)
+            command, word = word_dict['command'], word_dict["word"]
             if command == "ADD":
-                word_dict = json.loads(word)
                 word = word_dict["word"]
             print(f"vamos começar o {command} {word}")
             # Processa o comando e envia a resposta

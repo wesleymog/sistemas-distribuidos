@@ -17,18 +17,15 @@ class Client:
                 break
             if command in ['GET', 'ADD', 'REMOVE']:
                 word = input('Digite a palavra: ')
-            
-
-
+        
             # Se for o comando ADD, pede a definição e envia para o servidor
             if command == 'ADD':
                 definition = input('Digite a definicao: ')
-                data = json.dumps({'word': word, 'definition': definition})
-                self.sock.sendall(f'{command}->{data}'.encode())
+                data = json.dumps({'command':command, 'word': word, 'definition': definition})
             else:
                 # Envia a mensagem com o comando e a palavra para o servidor
-                message = f'{command}->{word}'
-                self.sock.sendall(message.encode())
+                data = json.dumps({'command':command, 'word': word})
+            self.sock.sendall(f'{data}'.encode())
             # Se for o comando REMOVE ou SAVE, pede a senha e envia para o servidor
             if command == 'REMOVE' or command == 'SAVE':
                 password = input('Digite a senha: ')
