@@ -10,17 +10,27 @@ PORT = 5000
 JSON_FILE = "dictionary.json"
 HASH_PASSWORD = "79809644a830ef92424a66227252b87bbdfb633a9dab18ba450c1b8d35665f20"
 
-class DictionaryServer:
-    def __init__(self):
+class Data:
+    def __init__(self, json_file):
+        self.json_file = json_file
+        self.data = self.load_json()
+
+    def load_json(self):
+        try:
+            with open(self.json_file) as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            data = {}
+        return data
+
+    def save_json(self):
+        with open(self.json_file, 'w') as f:
+            json.dump(self.data, f)
+class Dictionary:
+    def __init__(self, data: Data):
         self.dict_lock = threading.Lock()
-        # Abre o arquivo de saída em modo de escrita
-        if os.path.isfile(JSON_FILE):
-            with open(JSON_FILE, "r") as f:
-                # Escreve o dicionário em JSON no arquivo
-                self.dictionary= json.load( f)
-        else:
-            with open(JSON_FILE, "w") as f:
-                json.dump({}, f)
+        self.json_data = data        
+        self.dictionary= data.data
 
     def add_word(self, word, definition):
         with self.dict_lock:
@@ -47,9 +57,8 @@ class DictionaryServer:
         if hash_password != HASH_PASSWORD:
             return "Senha incorreta"
         # Abre o arquivo de saída em modo de escrita
-        with open(JSON_FILE, "w") as f:
-            # Escreve o dicionário em JSON no arquivo
-            json.dump(self.dictionary, f)
+        data.data = self.dictionary
+        data.save_json()
         
         # Retorna uma mensagem de confirmação
         return f"Dicionário salvo com sucesso com a senha!"
@@ -70,7 +79,7 @@ class DictionaryServer:
             else:
                 return "Palavra não encontrada"
 
-class ClientThread(threading.Thread):
+class Server(threading.Thread):
     def __init__(self, client_socket, dictionary):
         threading.Thread.__init__(self)
         self.client_socket = client_socket
@@ -99,7 +108,7 @@ class ClientThread(threading.Thread):
                 definitions = self.dictionary.get_definition(word)
                 response = "\nOs significados encontrados foram: "
                 if definitions:
-                    response = response + " , ".join(definitions)
+                    response = response + ", ".join(definitions)
                     print(response)
                     self.client_socket.send(response.encode())
                 else:
@@ -127,7 +136,8 @@ class ClientThread(threading.Thread):
 
 if __name__ == "__main__":
     # Cria um servidor e inicia a escuta por conexões
-    server = DictionaryServer()
+    data = Data(JSON_FILE)
+    dictionary = Dictionary(data)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((HOST, PORT))
@@ -142,5 +152,5 @@ if __name__ == "__main__":
         print(f"Nova conexão de {address}")
 
         # Cria uma nova thread para lidar com a conexão
-        client_thread = ClientThread(client_socket, server)
+        client_thread = Server(client_socket, dictionary)
         client_thread.start()

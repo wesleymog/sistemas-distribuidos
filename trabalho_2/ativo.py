@@ -3,12 +3,14 @@ import json
 
 HOST = 'localhost'
 PORT = 5000
-
-def main():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
-        print(f'Conectado a {HOST}:{PORT}')
-
+class Client:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.host, self.port))
+        print(f'Conectado a {self.host}:{self.port}')
+    def run(self):
         while True:
             command = input('Digite o comando (GET, ADD, REMOVE, SAVE) ou EXIT para sair: ')
             if command == 'EXIT':
@@ -22,20 +24,21 @@ def main():
             if command == 'ADD':
                 definition = input('Digite a definicao: ')
                 data = json.dumps({'word': word, 'definition': definition})
-                s.sendall(f'{command}->{data}'.encode())
+                self.sock.sendall(f'{command}->{data}'.encode())
             else:
                 # Envia a mensagem com o comando e a palavra para o servidor
                 message = f'{command}->{word}'
-                s.sendall(message.encode())
+                self.sock.sendall(message.encode())
             # Se for o comando REMOVE ou SAVE, pede a senha e envia para o servidor
             if command == 'REMOVE' or command == 'SAVE':
                 password = input('Digite a senha: ')
-                s.sendall(password.encode())
+                self.sock.sendall(password.encode())
             # Processa a resposta do servidor
-            data = s.recv(1024)
+            data = self.sock.recv(1024)
             print(data.decode())
 
             
 
 if __name__ == '__main__':
-    main()
+    client = Client(HOST, PORT)
+    client.run()
