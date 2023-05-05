@@ -52,7 +52,7 @@ class DictionaryServer:
             json.dump(self.dictionary, f)
         
         # Retorna uma mensagem de confirmação
-        return f"Dicionário salvo com sucesso com a senha {hash_password}"
+        return f"Dicionário salvo com sucesso com a senha!"
 
     def remove_word_with_password(self, word, password):
         # Gera hash da senha
