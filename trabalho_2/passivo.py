@@ -3,12 +3,13 @@ import socket
 import threading
 import json
 import hashlib
-
+import select
 
 HOST = 'localhost'
 PORT = 5000
 JSON_FILE = "dictionary.json"
 HASH_PASSWORD = "79809644a830ef92424a66227252b87bbdfb633a9dab18ba450c1b8d35665f20"
+BUFFER_SIZE = 5024
 
 class Data:
     def __init__(self, json_file):
@@ -104,11 +105,10 @@ class Server(threading.Thread):
             # Processa o comando e envia a resposta
             if command == "GET":
                 definitions = self.dictionary.get_definition(word)
-                response = "\nOs significados encontrados foram: "
+                message_ = "\nOs significados encontrados foram: "
                 if definitions:
-                    response = response + ", ".join(definitions)
-                    print(response)
-                    self.client_socket.send(response.encode())
+                    message_ = message_ + ", ".join(definitions)
+                    self.client_socket.send(message_.encode())
                 else:
                     self.client_socket.send("Palavra nao encontrada".encode())
             elif command == "ADD":
@@ -117,12 +117,12 @@ class Server(threading.Thread):
                 self.client_socket.send("Palavra adicionada com sucesso".encode())
             elif command == "REMOVE":
                 password = self.client_socket.recv(1024).decode()
-                response = self.dictionary.remove_word_with_password(word, password)
-                self.client_socket.send(response.encode())
+                message_ = self.dictionary.remove_word_with_password(word, password)
+                self.client_socket.send(message_.encode())
             elif command == "SAVE":
                 password = self.client_socket.recv(1024).decode()
-                response = self.dictionary.save_dictionary(password)
-                self.client_socket.send(response.encode())
+                message_ = self.dictionary.save_dictionary(password)
+                self.client_socket.send(message_.encode())
             else:
                 self.client_socket.send("Comando invalido".encode())
             # except Exception as e:
@@ -143,12 +143,35 @@ if __name__ == "__main__":
 
     print(f"Servidor rodando em {HOST}:{PORT}")
 
+    # Lista de sockets que serão monitorados pelo select
+    sockets = [server_socket]
+
     # Loop infinito para aceitar novas conexões e criar threads para lidar com cada uma
     while True:
-        # Aceita uma nova conexão
-        client_socket, address = server_socket.accept()
-        print(f"Nova conexão de {address}")
+        # Espera por uma conexão ou um socket pronto para leitura
+        ready_sockets, _, _ = select.select(sockets, [], [])
 
-        # Cria uma nova thread para lidar com a conexão
-        client_thread = Server(client_socket, dictionary)
-        client_thread.start()
+        for ready_socket in ready_sockets:
+            if ready_socket == server_socket:
+                # Aceita uma nova conexão
+                client_socket, address = server_socket.accept()
+                print(f"Nova conexão de {address}")
+                # Adiciona o socket do cliente à lista de sockets monitorados
+                sockets.append(client_socket)
+                # Cria uma nova thread para lidar com a conexão
+                client_thread = Server(client_socket, dictionary)
+                client_thread.start()
+            else:
+                # O socket está pronto para leitura
+                # Lê os dados enviados pelo cliente
+                data = ready_socket.recv(BUFFER_SIZE)
+                if not data:
+                    # O cliente encerrou a conexão
+                    print(f"Conexão encerrada por {ready_socket.getpeername()}")
+                    # Remove o socket da lista de sockets monitorados
+                    sockets.remove(ready_socket)
+                else:
+
+                    # Cria uma nova thread para lidar com a conexão
+                    client_thread = Server(client_socket, dictionary)
+                    client_thread.start()
