@@ -11,6 +11,12 @@ Vamos reimplementar o dicionário remoto do Laboratório 2 (com algumas alteraç
 ### Dependencies
 
 * Python 3
+* Rpyc
+### Installing dependencies
+
+```
+pip install rpyc
+```
 
 ### Executing program
 
